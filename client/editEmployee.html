@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Employee</title>
+</head>
+<body onload="getEmployeeData(); populateDepartmentOptions();">
+  <h1>Edit Employee</h1>
+
+  <form id="editEmployeeForm">
+    <label for="firstName">First Name:</label>
+    <input type="text" id="firstName" name="firstName"><br>
+
+    <label for="lastName">Last Name:</label>
+    <input type="text" id="lastName" name="lastName"><br>
+
+    <label for="startWorkYear">Start Work Year:</label>
+    <input type="number" id="startWorkYear" name="startWorkYear"><br>
+
+    <label for="departmentID">Department:</label>
+    <select id="departmentID" name="departmentID"></select><br>
+
+    <input type="submit" value="Update Employee" onclick="updateEmployee(event)"><br>
+    <button type="button" onclick="deleteEmployee()">Delete Employee</button>
+  </form>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const employeeId = urlParams.get('id');
+    const url = `http://localhost:8000/employees/${employeeId}`;
+
+    const getEmployeeData = async () => {
+      const accessToken = sessionStorage["accessToken"];
+
+      const resp = await fetch(url, {
+        method: "get",
+        headers: { "x-access-token": accessToken },
+      });
+
+      if (resp.ok) {
+        const employee = await resp.json();
+
+        document.getElementById("firstName").value = employee.firstName;
+        document.getElementById("lastName").value = employee.lastName;
+        document.getElementById("startWorkYear").value = employee.startWorkYear;
+        document.getElementById("departmentID").value = employee.departmentID;
+      } else {
+        alert("Failed to retrieve employee data");
+      }
+    };
+
+    const populateDepartmentOptions = async () => {
+      const accessToken = sessionStorage["accessToken"];
+      const departmentSelect = document.getElementById("departmentID");
+
+      const resp = await fetch('http://localhost:8000/departments', {
+        method: 'get',
+        headers: { 'x-access-token': accessToken },
+      });
+
+      const departments = await resp.json();
+
+      departments.forEach((department) => {
+        const option = document.createElement('option');
+        option.value = department._id;
+        option.textContent = department.name;
+        departmentSelect.appendChild(option);
+      });
+    };
+
+    const updateEmployee = async (event) => {
+      event.preventDefault();
+
+      const accessToken = sessionStorage["accessToken"];
+
+      const formData = new FormData(document.getElementById("editEmployeeForm"));
+      const body = {};
+      for (const [key, value] of formData.entries()) {
+        body[key] = value;
+      }
+
+      const resp = await fetch(url, {
+        method: "put",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": accessToken
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (resp.ok) {
+        alert("Employee updated successfully");
+        location.href = "./employees.html";
+      } else {
+        alert("Failed to update employee");
+      }
+    };
+
+    const deleteEmployee = async () => {
+      const accessToken = sessionStorage['accessToken'];
+
+      const resp = await fetch(url, {
+        method: 'delete',
+        headers: { 'x-access-token': accessToken },
+      });
+
+      if (resp.ok) {
+        alert('Employee deleted successfully');
+        location.href = "./employees.html";
+      } else {
+        alert('Failed to delete employee');
+      }
+    };
+  </script>
+</body>
+</html>
+

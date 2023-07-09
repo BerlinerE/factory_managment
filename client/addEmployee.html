@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Add Employee</title>
+  </head>
+  <body>
+    <h1>Add Employee</h1>
+
+    <form id="employeeForm">
+      <label for="firstName">First Name:</label>
+      <input type="text" id="firstName" required><br><br>
+
+      <label for="lastName">Last Name:</label>
+      <input type="text" id="lastName" required><br><br>
+
+      <label for="department">Department:</label>
+      <select id="department" required>
+        <option value="">Select Department</option>
+        <!-- Populate the department options dynamically using JavaScript -->
+      </select><br><br>
+
+      <label for="startWorkYear">Start Work Year:</label>
+      <input type="number" id="startWorkYear" required><br><br>
+
+      <button type="button" onclick="saveEmployee()">Save</button>
+      <button type="button" onclick="cancel()">Cancel</button>
+    </form>
+
+    <script>
+      const departmentSelect = document.getElementById('department');
+
+      // Function to fetch and populate department options in the select dropdown
+      const populateDepartmentOptions = async () => {
+        const accessToken = sessionStorage['accessToken'];
+        const departmentUrl = 'http://localhost:8000/departments';
+
+        const resp = await fetch(departmentUrl, {
+          method: 'get',
+          headers: { 'x-access-token': accessToken },
+        });
+
+        const departments = await resp.json();
+        console.log(departments);
+
+        departments.forEach((department) => {
+          const option = document.createElement('option');
+          option.value = department._id;
+          option.textContent = department.name;
+          departmentSelect.appendChild(option);
+        });
+      };
+
+      const saveEmployee = async () => {
+        const firstNameInput = document.getElementById('firstName');
+        const lastNameInput = document.getElementById('lastName');
+        const departmentSelect = document.getElementById('department');
+        const startWorkYearInput = document.getElementById('startWorkYear');
+
+        const firstName = firstNameInput.value.trim();
+        const lastName = lastNameInput.value.trim();
+        const departmentID = departmentSelect.value;
+      
+        const startWorkYear = parseInt(startWorkYearInput.value);
+
+        // Perform data validation
+        if (firstName === '' || lastName === '' || departmentID === '' || isNaN(startWorkYear)) {
+          alert('Please fill in all the required fields and provide a valid start work year.');
+          return;
+        }
+
+        const employeeData = {
+          firstName,
+          lastName,
+          departmentID,
+          startWorkYear,
+        };
+        console.log(employeeData)
+
+        const accessToken = sessionStorage['accessToken'];
+        const url = 'http://localhost:8000/employees';
+
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': accessToken,
+            },
+            body: JSON.stringify(employeeData),
+            
+          });
+          console.log("emp data from html",employeeData)
+
+          if (response.ok) {
+            alert('Employee created successfully!');
+            location.href = 'employees.html'; // Redirect to the employees page
+          } else {
+            const errorData = await response.json();
+            alert(`Error: ${errorData.message}`);
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('An error occurred while saving the employee.');
+        }
+      };
+
+      const cancel = () => {
+        location.href = 'employees.html';
+      };
+
+      // Populate department options when the page loads
+      populateDepartmentOptions();
+    </script>
+  </body>
+</html>

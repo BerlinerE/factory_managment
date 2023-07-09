@@ -1,0 +1,208 @@
+<html>
+  <head>
+    <title>Employees Page</title>
+    <style>
+      table {
+        border-collapse: collapse;
+      }
+
+      table,
+      th,
+      td {
+        border: 1px solid black;
+      }
+    </style>
+  </head>
+
+  <body onload="getEmployees()">
+    <h1>Employees Page</h1>
+    <input type="button" value="New Employee" onclick="redirectToNewEmployeePage()" />
+    <br /><br />
+    <input type="button" value="Logout" onclick="logout()" />
+    <table id="tbl" border="1"></table>
+    <br />
+    <label for="departmentFilter">Filter by Department:</label>
+    <select id="departmentFilter" onchange="filterEmployees()">
+    <option value="">All Departments</option>
+    </select>
+    <br/><br/>
+    <input type="button" value="Departments page" onclick="goToDepartments()">
+    <br/><br/>
+    <input type="button" value="Shifts page" onclick="goToShifts()">
+    <br/><br/>
+    <input type="button" value="Users page" onclick="goToUsers()">
+
+    <script>
+     const url = "http://localhost:8000/employees";
+      let employeesData; // Variable to store the employees data
+
+      // Create table
+    async  function createTable(data) {
+        let tblObj = document.getElementById("tbl");
+        // Clear existing table
+        while (tblObj.firstChild) {
+          tblObj.removeChild(tblObj.firstChild);
+        }
+
+        // Create table headers
+        let thead = document.createElement("thead");
+        let headerRow = document.createElement("tr");
+        let headers = ["Full Name", "Department", "Shifts"];
+
+        for (let i = 0; i < headers.length; i++) {
+          let th = document.createElement("th");
+          th.textContent = headers[i];
+          headerRow.appendChild(th);
+        }
+
+        thead.appendChild(headerRow);
+        tblObj.appendChild(thead);
+
+        // Create table rows
+        let tbody = document.createElement("tbody");
+        for (let i = 0; i < data.length; i++) {
+          let trObj = document.createElement("tr");
+
+          // Create cell for employee name
+          let employeeNameCell = document.createElement("td");
+          let employeeNameLink = document.createElement("a");
+          employeeNameLink.href = `editEmployee.html?id=${data[i]._id}`;
+          employeeNameLink.textContent = data[i].firstName + " " + data[i].lastName;
+          employeeNameCell.appendChild(employeeNameLink);
+          trObj.appendChild(employeeNameCell);
+
+          // Create cell for department name
+          let departmentCell = document.createElement("td");
+          let departmentLink = document.createElement("a");
+          if (data[i].departmentID) {
+            departmentLink.href = `editDepartment.html?id=${data[i].departmentID._id}`;
+            departmentLink.textContent = data[i].departmentID.name;
+          } else {
+            departmentLink.href = "#";
+            departmentLink.textContent = "N/A";
+          }
+          departmentCell.appendChild(departmentLink);
+          trObj.appendChild(departmentCell);
+
+      
+          // Create cell for shifts
+          let shiftsCell = document.createElement("td");
+
+          // Retrieve shifts for the employee
+          let shifts = await getShiftsByEmployeeId(data[i]._id);
+
+          // Create links for each shift
+          if (shifts.length > 0) {
+            for (let j = 0; j < shifts.length; j++) {
+              let shiftLink = document.createElement("a");
+              shiftLink.href = `shifts.html?shiftId=${shifts[j]._id}`;
+              shiftLink.textContent = shifts[j].date; // Assuming the date property is available in the shift object
+              shiftsCell.appendChild(shiftLink);
+              shiftsCell.appendChild(document.createElement("br")); // Add line break between shift links
+            }
+          } else {
+            shiftsCell.textContent = "No shifts"; // Display "No shifts" if the employee has no shifts
+          }
+
+          trObj.appendChild(shiftsCell);
+          tbody.appendChild(trObj);
+        }
+
+        tblObj.appendChild(tbody);
+      }
+      
+        // Retrieve shifts for an employee by ID
+  async function getShiftsByEmployeeId(employeeId) {
+          const accessToken = sessionStorage["accessToken"];
+          const url = `http://localhost:8000/employees/shifts/${employeeId}`;
+
+          const response = await fetch(url, {
+            method: "GET",
+            headers: { "x-access-token": accessToken },
+          });
+
+          const data = await response.json();
+          return data;
+        }
+      
+
+      // Populates the department options in the dropdown list
+      function populateDepartmentOptions() {
+        let departmentFilter = document.getElementById("departmentFilter");
+        departmentFilter.innerHTML = '<option value="">All Departments</option>';
+
+        let distinctDepartments = [];
+        let departmentNames = employeesData
+            .filter(employee => employee.departmentID !== null) // Filter out employees with null departmentID
+            .map(employee => employee.departmentID.name);
+        departmentNames.forEach(departmentName => {
+          if (!distinctDepartments.includes(departmentName)) {
+            distinctDepartments.push(departmentName);
+            let option = document.createElement("option");
+            option.value = departmentName;
+            option.textContent = departmentName;
+            departmentFilter.appendChild(option);
+          }
+        });
+      }
+
+      // Filter employees by department
+      function filterEmployees() {
+        let departmentFilter = document.getElementById("departmentFilter");
+        let selectedDepartment = departmentFilter.value;
+
+        if (selectedDepartment === "") {
+          createTable(employeesData); // Show all employees
+        } else {
+          let filteredEmployees = employeesData.filter((employee) => {
+          return (
+            employee.departmentID !== null &&
+            employee.departmentID.name === selectedDepartment
+          );
+        });
+          createTable(filteredEmployees); // Show filtered employees
+        }
+      }
+
+      const getEmployees = async () => {
+        const accessToken = sessionStorage["accessToken"];
+      
+
+        const resp = await fetch(url, {
+          method: "get",
+          headers: { "x-access-token": accessToken },
+        });
+
+        const data = await resp.json();
+        console.log(data);
+
+        employeesData = data;
+
+        createTable(employeesData); // Initialize the table with all employees
+
+        populateDepartmentOptions(); // Populate department options in the drop-down list
+      };
+
+      const redirectToNewEmployeePage = () => {
+        location.href = "addEmployee.html";
+      };
+
+      const logout = () => {
+        sessionStorage.removeItem("accessToken");
+        location.href = "./login.html";
+      };
+
+      const goToDepartments = () => {
+        location.href = "./departments.html";
+      };
+
+      const goToShifts = () => {
+        location.href = "./shifts.html";
+      };
+      const goToUsers = () => {
+        location.href = "./users.html";
+      };
+      
+    </script>
+  </body>
+</html>

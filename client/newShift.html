@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>New Shift</title>
+</head>
+
+<body>
+  <h1>Create New Shift</h1>
+  <form id="newShiftForm">
+    <label for="date">Date:</label>
+    <input type="date" id="date" required>
+    <br><br>
+    <label for="startingHour">Starting Hour:</label>
+    <input type="number" id="startingHour" required>
+    <br><br>
+    <label for="endingHour">Ending Hour:</label>
+    <input type="number" id="endingHour" required>
+    <br><br>
+    <label for="employees">Employees:</label>
+    <select id="employees" required multiple></select>
+    <br><br>
+    <input type="submit" value="Create Shift">
+    <br/><br/>
+    <br /><br />
+    <button onclick="goToEmp()">Employees</button>
+    <br /><br />
+    <input type="button" value="Logout" onclick="logout()" />
+  </form>
+
+  <script>
+    const employeesUrl = "http://localhost:8000/employees";
+    const shiftsUrl = "http://localhost:8000/shifts";
+
+    // Populate employees in the dropdown list
+    const populateEmployees = async () => {
+
+      const accessToken = sessionStorage["accessToken"];
+
+      const resp = await fetch(employeesUrl, {
+        headers: {
+          "x-access-token": accessToken,
+        },
+      });
+
+      if (resp.status === 401) {
+        // Handle unauthorized access
+        console.log("Unauthorized access. Please log in.");
+        return;
+      }
+
+      const data = await resp.json();
+      console.log("emp:",data);
+
+      const employeesSelect = document.getElementById("employees");
+
+      data.forEach((employee) => {
+        const option = document.createElement("option");
+        option.value = employee._id;
+        console.log( option.value)
+        option.textContent = employee.firstName + " " + employee.lastName;
+        employeesSelect.appendChild(option);
+      });
+    };
+
+    // Create new shift
+    const createShift = async (event) => {
+      event.preventDefault();
+
+      const date = document.getElementById("date").value;
+      const startingHour = document.getElementById("startingHour").value;
+      const endingHour = document.getElementById("endingHour").value;
+      const employeesSelect = document.getElementById("employees");
+      const selectedEmployees = Array.from(employeesSelect.selectedOptions, (option) =>
+        option.value
+      );
+
+      const shiftData = {
+        date: new Date(date),
+        startingHour: parseInt(startingHour),
+        endingHour: parseInt(endingHour),
+        employees: selectedEmployees,
+      };
+      console.log("body",shiftData)
+      const accessToken = sessionStorage.getItem("accessToken");
+
+
+      const resp = await fetch(shiftsUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": accessToken,
+      },
+      body: JSON.stringify(shiftData),
+    });
+      const data = await resp.json();
+      console.log(data);
+
+      // Redirect to shifts page or handle the response as needed
+      // Example:
+      // Check the response status
+      if (resp.ok) {
+        console.log("Shift created successfully!");
+        location.href = "shifts.html"; // Redirect to shifts page
+      } else {
+        console.log("Failed to create shift. Please try again.");
+      }
+    }
+    const newShiftForm = document.getElementById("newShiftForm");
+    newShiftForm.addEventListener("submit", createShift);
+   
+    const logout = () => {
+        sessionStorage.removeItem("accessToken");
+        location.href = "./login.html";
+      };
+
+      const goToEmp = () => {
+        location.href = "./employees.html";
+      };
+
+    populateEmployees(); // Populate employees in the dropdown list
+  </script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>New Department</title>
+</head>
+<body>
+  <h1>New Department</h1>
+
+  <form id="newDepartmentForm">
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" required>
+    <br/><br/>
+
+
+    <button type="submit">Save</button>
+    <button type="button" onclick="cancel()">Cancel</button>
+  </form>
+
+  <script>
+    // Function to handle form submission
+    const saveDepartment = async (event) => {
+    const accessToken = sessionStorage["accessToken"];
+      event.preventDefault();
+
+      const name = document.getElementById("name").value;
+
+      const departmentData = { name };
+
+      try {
+        const response = await fetch("http://localhost:8000/departments", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-access-token": accessToken
+          },
+          body: JSON.stringify(departmentData)
+        });
+
+        if (response.ok) {
+          // Department saved successfully, redirect to the "Departments" page
+          window.location.href = "departments.html";
+        } else {
+          // Handle error response
+          alert("Failed to save department");
+        }
+      } catch (error) {
+        console.error("Error saving department:", error);
+        alert("Failed to save department");
+      }
+    };
+
+    // Function to handle cancel button click
+    const cancel = () => {
+      // Redirect back to the "Departments" page
+      window.location.href = "departments.html";
+    };
+
+    // Attach event listener to the form submit event
+    const form = document.getElementById("newDepartmentForm");
+    form.addEventListener("submit", saveDepartment);
+  </script>
+</body>
+</html>

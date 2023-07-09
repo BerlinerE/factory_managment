@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Shifts Page</title>
+  <style>
+    table {
+      border-collapse: collapse;
+    }
+
+    table,
+    th,
+    td {
+      border: 1px solid black;
+    }
+  </style>
+</head>
+
+<body onload="getShifts()">
+  <h1>Shifts Page</h1>
+  <input type="button" value="New Shift" onclick="redirectToNewShiftPage()" />
+  <br /><br />
+  <input type="button" value="Logout" onclick="logout()" />
+
+  <h2>Shifts List</h2>
+  <table id="tbl" border="1"></table>
+
+  <h2>Allocate Employees to Shift</h2>
+  <label for="shiftSelect">Select Shift:</label>
+  <select id="shiftSelect"></select>
+  <br /><br />
+  <label for="employeeSelect">Select Employee:</label>
+  <select id="employeeSelect"></select>
+  <br /><br />
+  <input type="button" value="Allocate Employee" onclick="allocateEmployeeToShift()" />
+  <br /><br />
+  <button onclick="goToEmp()">Employees Page</button>
+  <br /><br />
+  <script>
+    const shiftsUrl = "http://localhost:8000/shifts";
+    const employeesUrl = "http://localhost:8000/employees";
+
+    let shiftsData; // Variable to store the shifts data
+    let employeesData; // Variable to store the employees data
+
+    // Create table
+// Create table
+function createTable(data) {
+  let tblObj = document.getElementById("tbl");
+
+  // Clear existing table
+  while (tblObj.firstChild) {
+    tblObj.removeChild(tblObj.firstChild);
+  }
+
+  // Create table headers
+  let thead = document.createElement("thead");
+  let headerRow = document.createElement("tr");
+  let headers = [ "Date", "Start Time", "End Time", "Employees"];
+
+  for (let i = 0; i < headers.length; i++) {
+    let th = document.createElement("th");
+    th.textContent = headers[i];
+    headerRow.appendChild(th);
+  }
+
+  thead.appendChild(headerRow);
+  tblObj.appendChild(thead);
+
+  // Create table rows
+  let tbody = document.createElement("tbody");
+  for (let i = 0; i < data.length; i++) {
+    let trObj = document.createElement("tr");
+
+
+
+    // Create cell for date
+    let dateCell = document.createElement("td");
+    dateCell.textContent = new Date(data[i].date).toLocaleDateString();
+    trObj.appendChild(dateCell);
+
+    // Create cell for start time
+    let startTimeCell = document.createElement("td");
+    startTimeCell.textContent = data[i].startingHour;
+    trObj.appendChild(startTimeCell);
+
+    // Create cell for end time
+    let endTimeCell = document.createElement("td");
+    endTimeCell.textContent = data[i].endingHour;
+    trObj.appendChild(endTimeCell);
+   // Create cell for employee
+    let employeesCell = document.createElement("td");
+    data[i].employees.forEach((employee) => {
+    let employeeLink = document.createElement("a");
+    employeeLink.textContent = employee.firstName + " " + employee.lastName;
+    employeeLink.href = `editEmployee.html?id=${employee._id}`; // Replace "employee.html" with the appropriate URL for the employee details page
+    employeesCell.appendChild(employeeLink);
+    employeesCell.appendChild(document.createElement("br")); // Add line break between employee links
+});
+trObj.appendChild(employeesCell);
+
+    tbody.appendChild(trObj);
+  }
+
+  tblObj.appendChild(tbody);
+}
+
+    // Populates the shift options in the dropdown list
+    function populateShiftOptions() {
+      let shiftSelect = document.getElementById("shiftSelect");
+      shiftSelect.innerHTML = "";
+
+      for (let i = 0; i < shiftsData.length; i++) {
+        let option = document.createElement("option");
+        option.value = shiftsData[i]._id;
+        option.textContent = shiftsData[i].date;
+        shiftSelect.appendChild(option);
+      }
+    }
+
+    // Populates the employee options in the dropdown list
+    function populateEmployeeOptions() {
+      let employeeSelect = document.getElementById("employeeSelect");
+      employeeSelect.innerHTML = "";
+
+      for (let i = 0; i < employeesData.length; i++) {
+        let option = document.createElement("option");
+        option.value = employeesData[i]._id;
+        option.textContent = employeesData[i].firstName + " " + employeesData[i].lastName;
+        employeeSelect.appendChild(option);
+      }
+    }
+
+    // Allocate employee to shift
+// Allocate employee to shift
+function allocateEmployeeToShift() {
+  let shiftSelect = document.getElementById("shiftSelect");
+  let employeeSelect = document.getElementById("employeeSelect");
+
+  let selectedShiftId = shiftSelect.value;
+  let selectedEmployeeId = employeeSelect.value;
+  const accessToken = sessionStorage.getItem("accessToken");
+
+  // Perform the allocation logic here
+  fetch(`http://localhost:8000/shifts/${selectedShiftId}/allocate`, {
+    method: "post",
+    body: JSON.stringify({ employeeId: selectedEmployeeId }),
+    headers: {
+      "Content-Type": "application/json",
+      "x-access-token": accessToken,
+    },
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log(data);
+      // Update the table after allocation
+      getShifts();
+    })
+    .catch((error) => {
+      console.log(error);
+      // Handle the error
+    });
+
+  // Clear the selection after allocation
+  shiftSelect.value = "";
+  employeeSelect.value = "";
+}
+
+
+    const getShifts = async () => {
+        const accessToken = sessionStorage["accessToken"];
+        
+        const resp = await fetch(shiftsUrl, {
+          method: "get",
+          headers: { "x-access-token": accessToken },
+        });
+
+        const data = await resp.json();
+        console.log(data);
+
+         shiftsData = data;
+
+         createTable(shiftsData); // Initialize the table with all shifts
+
+        populateShiftOptions(); // Populate shift options in the dropdown list
+    };
+
+    const getEmployees = async () => {
+        const accessToken = sessionStorage["accessToken"];
+        const resp = await fetch(employeesUrl, {
+          method: "get",
+          headers: { "x-access-token": accessToken },
+        });
+
+         const data = await resp.json();
+         console.log(data);
+
+        employeesData = data;
+
+      populateEmployeeOptions(); // Populate employee options in the dropdown list
+    };
+
+    const redirectToNewShiftPage = () => {
+      location.href = "./newShift.html";
+    };
+
+    const logout = () => {
+      sessionStorage.removeItem("accessToken");
+      location.href = "./login.html";
+    };
+    const goToEmp = () => {
+        location.href = "./employees.html";
+      };
+    getShifts(); // Fetch and display shifts data
+    getEmployees(); // Fetch and populate employees data
+  </script>
+</body>
+</html>
+
+
+

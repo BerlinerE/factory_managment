@@ -1,0 +1,31 @@
+<html>
+  <body>
+    Name: <input type="text" id="username" /> <br />
+    Email: <input type="text" id="email" /> <br />
+    <button onclick="login()">Login</button>
+    <script>
+      const url = "http://localhost:8000/auth";
+
+      const login = async () => {
+        const loginData = {
+          username: document.getElementById("username").value,
+          email: document.getElementById("email").value,
+        };
+        console.log(loginData);
+        // sending loginData object
+        const resp = await fetch(url, {
+          method: "post",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(loginData),
+        });
+        const data = await resp.json();
+   
+        // console.log(data);
+        // console.log(data.data.token);
+        sessionStorage["accessToken"] = data.data.token;
+      
+        location.href = "./employees.html";
+      };
+    </script>
+  </body>
+</html>

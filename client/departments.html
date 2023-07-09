@@ -1,0 +1,163 @@
+<!-- department.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Departments Page</title>
+  <style>
+    table {
+      border-collapse: collapse;
+    }
+
+    table, th, td {
+      border: 1px solid black;
+    }
+  </style>
+</head>
+
+<body onload="getDepartments()">
+  <h1>Departments Page</h1>
+  <input type="button" value="New Department" onclick="redirectToNewDepartmentPage()" />
+  <br /><br />
+  <input type="button" value="Logout" onclick="logout()" />
+  <table id="tbl" border="1"></table>
+
+  <script>
+    const url = "http://localhost:8000/departments";
+    let departmentsData; // Variable to store the departments data
+
+    // Create table
+    function createTable(data) {
+      console.log("create table",data)
+      let tblObj = document.getElementById("tbl");
+
+      // Clear existing table
+      while (tblObj.firstChild) {
+        tblObj.removeChild(tblObj.firstChild);
+      }
+
+      // Create table headers
+      let thead = document.createElement("thead");
+      let headerRow = document.createElement("tr");
+      let headers = ["Department Name", "Department Manager", "Employees"];
+
+      for (let i = 0; i < headers.length; i++) {
+        let th = document.createElement("th");
+        th.textContent = headers[i];
+        headerRow.appendChild(th);
+      }
+
+      thead.appendChild(headerRow);
+      tblObj.appendChild(thead);
+
+      // Create table rows
+      let tbody = document.createElement("tbody");
+      for (let i = 0; i < data.length; i++) {
+        let trObj = document.createElement("tr");
+
+        // Create cell for department name
+        let departmentNameCell = document.createElement("td");
+        let departmentNameLink = document.createElement("a");
+        departmentNameLink.href = `editDepartment.html?id=${data[i]._id}`;
+        departmentNameLink.textContent = data[i].name;
+        departmentNameCell.appendChild(departmentNameLink);
+        trObj.appendChild(departmentNameCell);
+
+        // Create cell for department manager
+        let departmentManagerCell = document.createElement("td");
+        let departmentManagerLink = document.createElement("a");
+
+        // Check if manager data is available
+        if (data[i].manager && data[i].manager._id) {
+          departmentManagerLink.href = `editEmployee.html?id=${data[i].manager._id}`;
+          departmentManagerLink.textContent = data[i].manager.firstName; 
+        } else {
+          departmentManagerLink.textContent = "No Manager Assigned";
+          // Handle the case when there is no manager assigned
+          // For example, you can disable the link or provide an alternative action
+        }
+
+        departmentManagerCell.appendChild(departmentManagerLink);
+        trObj.appendChild(departmentManagerCell);
+
+        // Create cell for employees
+        let employeesCell = document.createElement("td");
+        console.log("Employees:", data[i].employees);
+
+        if (data[i].employees && data[i].employees.length > 0) {
+          data[i].employees.forEach((employee) => {
+            console.log("Employee:", employee);
+            let employeeLink = document.createElement("a");
+            employeeLink.href = `editEmployee.html?id=${employee._id}`;
+            employeeLink.textContent = `${employee.firstName} ${employee.lastName}`;
+            employeesCell.appendChild(employeeLink);
+  
+            let br = document.createElement("br");
+            employeesCell.appendChild(br);
+          });
+        } else {
+          console.log("No Employees Assigned");
+          employeesCell.textContent = "No Employees Assigned";
+        }
+
+        trObj.appendChild(employeesCell);
+        tbody.appendChild(trObj);
+      }
+
+      tblObj.appendChild(tbody);
+    }
+
+    async function getDepartments() {
+      const accessToken = sessionStorage.getItem("accessToken");
+
+      const resp = await fetch(url, {
+        method: "GET",
+        headers: { "x-access-token": accessToken },
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+
+        // Create a map of department IDs to department objects
+        const departmentsMap = new Map();
+        data.forEach((department) => {
+          departmentsMap.set(department._id, department);
+        });
+
+        // Fetch the departments with populated employees
+        const populatedData = await fetch("http://localhost:8000/departments/populated", {
+          method: "GET",
+          headers: { "x-access-token": accessToken },
+        });
+
+        if (populatedData.ok) {
+          const departmentsWithData = await populatedData.json();
+
+          departmentsWithData.forEach((department) => {
+            const existingDepartment = departmentsMap.get(department._id);
+            if (existingDepartment) {
+              existingDepartment.employees = department.employees;
+            }
+          });
+
+          departmentsData = Array.from(departmentsMap.values());
+          console.log("department data should be with employee:",departmentsData);
+          createTable(departmentsData); // Initialize the table with all departments
+        } else {
+          alert("Failed to retrieve department data with populated employees");
+        }
+      } else {
+        alert("Failed to retrieve department data");
+      }
+    }
+
+    function redirectToNewDepartmentPage() {
+      location.href = "./addDepartment.html";
+    }
+
+    function logout() {
+      sessionStorage.removeItem("accessToken");
+      location.href = "./login.html";
+    }
+  </script>
+</body>
+</html>

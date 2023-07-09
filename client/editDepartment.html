@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Department</title>
+</head>
+<body onload="getDepartmentData()">
+  <h1>Edit Department</h1>
+  
+  <form id="editDepartmentForm">
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name">
+    <br/>
+    <label for="manager">Manager:</label>
+    <select id="manager" name="manager"></select>
+    <br/> <br/>
+
+    <!-- Add more fields as needed -->
+    
+    <input type="submit" value="Update Department">
+  </form>
+
+  <h2>Employees</h2>
+  <ul id="employeesList"></ul>
+
+  <h2>Add Employee</h2>
+  <select id="availableEmployees"></select>
+  <button onclick="addEmployee()">Add</button>
+  <button onclick="deleteDepartment()">Delete Department</button>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const departmentId = urlParams.get('id');
+    const url = `http://localhost:8000/departments/${departmentId}`;
+
+    const getDepartmentData = async () => {
+  const accessToken = sessionStorage["accessToken"];
+
+  const departmentResp = await fetch(url, {
+    method: "get",
+    headers: { "x-access-token": accessToken },
+  });
+
+  if (departmentResp.ok) {
+    const department = await departmentResp.json();
+
+    // Populate form fields with department data
+    document.getElementById("name").value = department.name;
+
+    // Populate the "Manager" dropdown with employee names
+    const managerSelect = document.getElementById("manager");
+    managerSelect.innerHTML = ""; // Clear the previous options
+
+    const employeesResp = await fetch("http://localhost:8000/employees", {
+      method: "get",
+      headers: { "x-access-token": accessToken },
+    });
+
+    if (employeesResp.ok) {
+      const employees = await employeesResp.json();
+      console.log("employees:", employees);
+
+      employees.forEach((employee) => {
+        const option = document.createElement("option");
+        option.value = employee._id;
+        option.textContent = `${employee.firstName} ${employee.lastName}`;
+        managerSelect.appendChild(option);
+      });
+
+      // Set the selected manager in the dropdown
+      managerSelect.value = department.manager;
+
+      // Display the employees
+      const employeesList = document.getElementById("employeesList");
+      employeesList.innerHTML = ""; // Clear the previous list
+
+      console.log("departmentId:", departmentId);
+
+      if (departmentId !== null) {
+        const departmentEmployees = employees.filter(
+          (employee) => employee.departmentID && employee.departmentID._id === departmentId
+        );
+        console.log("departmentEmployees:", departmentEmployees);
+
+        departmentEmployees.forEach((departmentEmployee) => {
+          const li = document.createElement("li");
+          li.textContent = `${departmentEmployee.firstName} ${departmentEmployee.lastName}`;
+          employeesList.appendChild(li);
+        });
+      }
+
+      // Populate the "Available Employees" dropdown for adding employees
+      const availableEmployeesSelect = document.getElementById("availableEmployees");
+      availableEmployeesSelect.innerHTML = ""; // Clear the previous options
+
+      employees.forEach((employee) => {
+        if (!employee.departmentID || employee.departmentID._id !== departmentId) {
+          const option = document.createElement("option");
+          option.value = employee._id;
+          option.textContent = `${employee.firstName} ${employee.lastName}`;
+          availableEmployeesSelect.appendChild(option);
+        }
+      });
+    } else {
+      alert("Failed to retrieve employee data");
+    }
+  } else {
+    alert("Failed to retrieve department data");
+  }
+};
+
+
+    const addEmployee = async () => {
+      const accessToken = sessionStorage["accessToken"];
+      const departmentId = urlParams.get('id');
+      const employeeId = document.getElementById("availableEmployees").value;
+
+      const resp = await fetch(`http://localhost:8000/departments/${departmentId}/addEmployee`, {
+        method: "put",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": accessToken
+        },
+        body: JSON.stringify({ employeeId, departmentId })
+      });
+
+      if (resp.ok) {
+        // Employee added successfully
+        // Reload the department data
+        getDepartmentData();
+      } else {
+        // Handle error response
+        alert("Failed to add employee");
+      }
+    };
+
+    const updateDepartment = async (event) => {
+      event.preventDefault();
+
+      const accessToken = sessionStorage["accessToken"];
+
+      const formData = new FormData(document.getElementById("editDepartmentForm"));
+      const body = {};
+      for (const [key, value] of formData.entries()) {
+        body[key] = value;
+      }
+
+      const resp = await fetch(url, {
+        method: "put",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": accessToken
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (resp.ok) {
+        // Department updated successfully
+        // Redirect to the departments page or show a success message
+        alert("Department updated successfully");
+        location.href = "./departments.html";
+      } else {
+        // Handle error response
+        alert("Failed to update department");
+      }
+    };
+
+    const deleteDepartment = async () => {
+      const accessToken = sessionStorage["accessToken"];
+
+      const resp = await fetch(url, {
+        method: "delete",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": accessToken
+        }
+      });
+
+      if (resp.ok) {
+        // Department deleted successfully
+        // Redirect to the departments page or show a success message
+        alert("Department deleted successfully");
+        location.href = "./departments.html";
+      } else {
+        // Handle error response
+        alert("Failed to delete department");
+      }
+    };
+
+    const form = document.getElementById("editDepartmentForm");
+    form.addEventListener("submit", updateDepartment);
+  </script>
+</body>
+</html>
+
